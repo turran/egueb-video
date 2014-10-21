@@ -1,4 +1,4 @@
-/* Gst Egueb - Gstreamer based plugins and libs for Egueb
+/* Egueb Video - Video Providers for Egueb
  * Copyright (C) 2014 Jorge Luis Zapata
  *
  * This library is free software; you can redistribute it and/or
@@ -16,28 +16,33 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "gst_egueb_private.h"
-#include "Gst_Egueb.h"
+#include "egueb_video_private.h"
+#include "egueb_video_gst_provider.h"
+
+#if HAVE_GSTREAMER
+#include "gst/gst.h"
+#endif
 /*============================================================================*
  *                                  Local                                     *
  *============================================================================*/
-typedef struct _Gst_Egueb_Video_Provider
+#if HAVE_GSTREAMER
+typedef struct _Egueb_Video_Gst_Provider
 {
 	Egueb_Dom_Video_Provider *vp;
 	GstElement *playbin2;
 	Enesim_Renderer *image;
-} Gst_Egueb_Video_Provider;
+} Egueb_Video_Gst_Provider;
 
-static void _gst_egueb_video_provider_buffer_free(void *data, void *user_data)
+static void _egueb_video_gst_provider_buffer_free(void *data, void *user_data)
 {
 	GstBuffer *buffer = user_data;
 	gst_buffer_unref(buffer);
 }
 
-static void _gst_egueb_video_provider_fakesink_handoff_cb(GstElement *object,
+static void _egueb_video_gst_provider_fakesink_handoff_cb(GstElement *object,
 		GstBuffer *buf, GstPad *pad, gpointer data)
 {
-	Gst_Egueb_Video_Provider *thiz = data;
+	Egueb_Video_Gst_Provider *thiz = data;
 	GstCaps *caps;
 	const GstStructure *s;
 	gint width, height;
@@ -50,21 +55,23 @@ static void _gst_egueb_video_provider_fakesink_handoff_cb(GstElement *object,
 	gst_structure_get_int(s, "height", &height);
 	gst_caps_unref(caps);
 
+	surface = enesim_surface_new_data_from(ENESIM_FORMAT_ARGB8888,
+			width, height, EINA_FALSE, GST_BUFFER_DATA(buf),
+			GST_ROUND_UP_4(width * 4),
+			_egueb_video_gst_provider_buffer_free,
+			gst_buffer_ref(buf));
 	/* lock the renderer */
 	enesim_renderer_lock(thiz->image);
 	/* set the new surface */
-	surface = enesim_surface_new_data_from(ENESIM_FORMAT_ARGB8888,
-			width, height, EINA_FALSE, GST_BUFFER_DATA(buf),
-			GST_ROUND_UP_4(width * 4), _gst_egueb_video_provider_buffer_free, gst_buffer_ref(buf));
 	enesim_renderer_image_source_surface_set(thiz->image, surface);
 	/* unlock the renderer */
 	enesim_renderer_unlock(thiz->image);
 }
 
 /* We will use this to notify egueb about some changes (buffering, state, error, whatever) */
-static gboolean _gst_egueb_video_provider_bus_watch(GstBus *bus, GstMessage *msg, gpointer data)
+static gboolean _egueb_video_gst_provider_bus_watch(GstBus *bus, GstMessage *msg, gpointer data)
 {
-	Gst_Egueb_Video_Provider *thiz = data;
+	Egueb_Video_Gst_Provider *thiz = data;
 
 	if (msg->src != (gpointer) thiz->playbin2)
 		return TRUE;
@@ -85,15 +92,15 @@ static gboolean _gst_egueb_video_provider_bus_watch(GstBus *bus, GstMessage *msg
 /*----------------------------------------------------------------------------*
  *                       The Video provider interface                         *
  *----------------------------------------------------------------------------*/
-static void * _gst_egueb_video_provider_descriptor_create(void)
+static void * _egueb_video_gst_provider_descriptor_create(void)
 {
-	Gst_Egueb_Video_Provider *thiz;
+	Egueb_Video_Gst_Provider *thiz;
 	GstElement *fakesink, *capsfilter, *sink;
 	GstBus *bus;
 	GstPad *pad, *ghost_pad;
 	GstCaps *caps;
 
-	thiz = calloc(1, sizeof(Gst_Egueb_Video_Provider));
+	thiz = calloc(1, sizeof(Egueb_Video_Gst_Provider));
 
 	sink = gst_bin_new(NULL);
 
@@ -112,7 +119,7 @@ static void * _gst_egueb_video_provider_descriptor_create(void)
 	fakesink = gst_element_factory_make("fakesink", NULL);
 	g_object_set(fakesink, "sync", TRUE, "signal-handoffs", TRUE, NULL);
 	g_signal_connect(G_OBJECT(fakesink), "handoff",
-			G_CALLBACK(_gst_egueb_video_provider_fakesink_handoff_cb),
+			G_CALLBACK(_egueb_video_gst_provider_fakesink_handoff_cb),
 			thiz); 
 
 	gst_bin_add_many(GST_BIN(sink), capsfilter, fakesink, NULL);
@@ -127,7 +134,7 @@ static void * _gst_egueb_video_provider_descriptor_create(void)
 	thiz->playbin2 = gst_element_factory_make("playbin2", NULL);
 	/* we add a message handler */
 	bus = gst_pipeline_get_bus (GST_PIPELINE (thiz->playbin2));
-	gst_bus_add_watch (bus, _gst_egueb_video_provider_bus_watch, thiz);
+	gst_bus_add_watch (bus, _egueb_video_gst_provider_bus_watch, thiz);
 	gst_object_unref (bus);
 
 	/* finally set the sink */
@@ -136,9 +143,9 @@ static void * _gst_egueb_video_provider_descriptor_create(void)
 	return thiz;
 }
 
-static void _gst_egueb_video_provider_descriptor_destroy(void *data)
+static void _egueb_video_gst_provider_descriptor_destroy(void *data)
 {
-	Gst_Egueb_Video_Provider *thiz = data;
+	Egueb_Video_Gst_Provider *thiz = data;
 
 	gst_element_set_state(thiz->playbin2, GST_STATE_NULL);
 	gst_object_unref(thiz->playbin2);
@@ -151,55 +158,57 @@ static void _gst_egueb_video_provider_descriptor_destroy(void *data)
 	free(thiz);
 }
 
-static void _gst_egueb_video_provider_descriptor_open(void *data, Egueb_Dom_String *uri)
+static void _egueb_video_gst_provider_descriptor_open(void *data, Egueb_Dom_String *uri)
 {
-	Gst_Egueb_Video_Provider *thiz = data;
+	Egueb_Video_Gst_Provider *thiz = data;
 
 	/* the uri that comes from the api must be absolute */
 	gst_element_set_state(thiz->playbin2, GST_STATE_READY);
 	g_object_set(thiz->playbin2, "uri", egueb_dom_string_string_get(uri), NULL);
 }
 
-static void _gst_egueb_video_provider_descriptor_close(void *data)
+static void _egueb_video_gst_provider_descriptor_close(void *data)
 {
-	Gst_Egueb_Video_Provider *thiz = data;
+	Egueb_Video_Gst_Provider *thiz = data;
 	gst_element_set_state(thiz->playbin2, GST_STATE_READY);
 }
 
-static void _gst_egueb_video_provider_descriptor_play(void *data)
+static void _egueb_video_gst_provider_descriptor_play(void *data)
 {
-	Gst_Egueb_Video_Provider *thiz = data;
+	Egueb_Video_Gst_Provider *thiz = data;
 	gst_element_set_state(thiz->playbin2, GST_STATE_PLAYING);
 }
 
-static void _gst_egueb_video_provider_descriptor_pause(void *data)
+static void _egueb_video_gst_provider_descriptor_pause(void *data)
 {
-	Gst_Egueb_Video_Provider *thiz = data;
+	Egueb_Video_Gst_Provider *thiz = data;
 	gst_element_set_state(thiz->playbin2, GST_STATE_PAUSED);
 }
 
-static Egueb_Dom_Video_Provider_Descriptor _gst_egueb_video_provider = {
-	/* .create 	= */ _gst_egueb_video_provider_descriptor_create,
-	/* .destroy 	= */ _gst_egueb_video_provider_descriptor_destroy,
-	/* .open 	= */ _gst_egueb_video_provider_descriptor_open,
-	/* .close 	= */ _gst_egueb_video_provider_descriptor_close,
-	/* .play 	= */ _gst_egueb_video_provider_descriptor_play,
-	/* .pause 	= */ _gst_egueb_video_provider_descriptor_pause
+static Egueb_Dom_Video_Provider_Descriptor _egueb_video_gst_provider = {
+	/* .create 	= */ _egueb_video_gst_provider_descriptor_create,
+	/* .destroy 	= */ _egueb_video_gst_provider_descriptor_destroy,
+	/* .open 	= */ _egueb_video_gst_provider_descriptor_open,
+	/* .close 	= */ _egueb_video_gst_provider_descriptor_close,
+	/* .play 	= */ _egueb_video_gst_provider_descriptor_play,
+	/* .pause 	= */ _egueb_video_gst_provider_descriptor_pause
 };
+#endif
 /*============================================================================*
  *                                 Global                                     *
  *============================================================================*/
 /*============================================================================*
  *                                   API                                      *
  *============================================================================*/
-EAPI Egueb_Dom_Video_Provider * gst_egueb_video_provider_new(
+EAPI Egueb_Dom_Video_Provider * egueb_video_gst_provider_new(
 		const Egueb_Dom_Video_Provider_Notifier *notifier,
 		Enesim_Renderer *image, Egueb_Dom_Node *n)
 {
-	Gst_Egueb_Video_Provider *thiz;
+#if HAVE_GSTREAMER
+	Egueb_Video_Gst_Provider *thiz;
 	Egueb_Dom_Video_Provider *ret;
 
-	ret = egueb_dom_video_provider_new(&_gst_egueb_video_provider,
+	ret = egueb_dom_video_provider_new(&_egueb_video_gst_provider,
 			notifier, enesim_renderer_ref(image), n);
 	if (!ret)
 	{
@@ -212,4 +221,7 @@ EAPI Egueb_Dom_Video_Provider * gst_egueb_video_provider_new(
 	thiz->vp = ret;
 
 	return ret;
+#else
+	return NULL;
+#endif
 }

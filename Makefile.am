@@ -28,14 +28,8 @@ lib_LTLIBRARIES =
 check_PROGRAMS =
 EXTRA_DIST =
 
-### Binaries
-include src/bin/Makefile.mk
-
 ### Library
 include src/lib/Makefile.mk
-
-### Modules
-include src/modules/Makefile.mk
 
 EXTRA_DIST += \
 AUTHORS \
@@ -53,8 +47,8 @@ $(SED) \
 -e 's,@includedir\@,$(includedir),g' \
 -e 's,@pkgincludedir\@,$(pkgincludedir),g' \
 -e 's,@pkglibdir\@,$(pkglibdir),g' \
--e 's,@gst_egueb_lib_requirements_pc_private\@,$(gst_egueb_lib_requirements_pc_private),g' \
--e 's,@gst_egueb_lib_requirements_pc\@,$(gst_egueb_lib_requirements_pc),g' \
+-e 's,@egueb_video_requirements_pc_private\@,$(egueb_video_requirements_pc_private),g' \
+-e 's,@egueb_video_requirements_pc\@,$(egueb_video_requirements_pc),g' \
 < $< > $@ || rm $@
 
 pc_verbose = $(pc_verbose_@AM_V@)
@@ -68,5 +62,5 @@ pc_verbose_0 = @echo "  PC      " $@;
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA =
 
-pkgconfig_DATA += gst-egueb.pc
+pkgconfig_DATA += egueb-video.pc
 

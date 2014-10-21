@@ -1,13 +1,14 @@
-lib_LTLIBRARIES = src/lib/libgstegueb.la
+lib_LTLIBRARIES = src/lib/libegueb_video.la
 
 installed_headersdir = $(pkgincludedir)-$(VMAJ)
 dist_installed_headers_DATA = \
-src/lib/Gst_Egueb.h
+src/lib/Egueb_Video.h \
+src/lib/egueb_video_gst_provider.h
 
-src_lib_libgstegueb_la_SOURCES = \
-src/lib/gst_egueb_document.c \
-src/lib/gst_egueb_video_provider.c \
-src/lib/gst_egueb_main.c
+src_lib_libegueb_video_la_SOURCES = \
+src/lib/egueb_video.c \
+src/lib/egueb_video_gst_provider.c \
+src/lib/egueb_video_ope_provider.c
 
-src_lib_libgstegueb_la_CPPFLAGS = $(GST_EGUEB_LIB_CFLAGS)
-src_lib_libgstegueb_la_LIBADD = $(GST_EGUEB_LIB_LIBS)
+src_lib_libegueb_video_la_CPPFLAGS = $(EGUEB_VIDEO_CFLAGS)
+src_lib_libegueb_video_la_LIBADD = $(EGUEB_VIDEO_LIBS)

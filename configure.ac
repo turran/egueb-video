@@ -10,7 +10,7 @@ m4_define([lt_cur], m4_eval(v_maj + v_min))
 m4_define([lt_rev], v_mic)
 m4_define([lt_age], v_min)
 
-AC_INIT([gst-egueb], [v_ver], [enesim-devel@googlegroups.com])
+AC_INIT([egueb-video], [v_ver], [enesim-devel@googlegroups.com])
 AC_PREREQ([2.60])
 AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_MACRO_DIR([m4])
@@ -50,34 +50,44 @@ if ! $PKG_CONFIG --atleast-pkgconfig-version 0.22; then
    AC_MSG_ERROR([pkg-config >= 0.22 is required])
 fi
 
+egueb_video_requirements_cflags=""
+egueb_video_requirements_libs=""
+egueb_video_requirements_pc="egueb-dom enesim"
+egueb_video_requirements_pc_private=""
+
+### Check for each backend
+### GStreamer
+PKG_CHECK_EXISTS([gstreamer-0.10],
+   [
+    have_gstreamer="yes"
+    egueb_video_requirements_pc="${egueb_video_requirements_pc} gstreamer-0.10"
+    AC_DEFINE([HAVE_GSTREAMER], [1], [Have support for gstreamer])
+   ],
+   [have_gstreamer="no"])
+
+AM_CONDITIONAL([HAVE_GSTREAMER], [test "x${have_gstreamer}" = "xyes"])
+
+### ONEPLAY
+PKG_CHECK_EXISTS([oneplay-engine],
+   [
+    have_ope="yes"
+    egueb_video_requirements_pc="${egueb_video_requirements_pc} oneplay-engine"
+    AC_DEFINE([HAVE_OPE], [1], [Have support for ope])
+   ],
+   [have_ope="no"])
+
+AM_CONDITIONAL([HAVE_OPE], [test "x${have_ope}" = "xyes"])
+
+
+AC_SUBST([egueb_video_requirements_pc])
+AC_SUBST([egueb_video_requirements_pc_private])
+
 ### Checks for libraries
-gst_egueb_bin_requirements_cflags=""
-gst_egueb_bin_requirements_bins=""
-gst_egueb_bin_requirements_pc="gstreamer-0.10"
+PKG_CHECK_MODULES([EGUEB_VIDEO], [${egueb_video_requirements_pc}])
 
-gst_egueb_lib_requirements_cflags=""
-gst_egueb_lib_requirements_libs=""
-gst_egueb_lib_requirements_pc="gstreamer-0.10 egueb-dom enesim"
-gst_egueb_lib_requirements_pc_private=""
 
-gst_egueb_modules_requirements_cflags=""
-gst_egueb_modules_requirements_libs=""
-gst_egueb_modules_requirements_pc="gstreamer-0.10 gstreamer-base-0.10 gstreamer-interfaces-0.10 gstreamer-video-0.10 egueb-dom egueb-smil enesim"
-
-dnl make GST_MAJORMINOR available in Makefile.am
-GST_MAJORMINOR=0.10
-AC_SUBST(GST_MAJORMINOR)
-
-AC_SUBST([gst_egueb_lib_requirements_pc])
-AC_SUBST([gst_egueb_lib_requirements_pc_private])
-
-PKG_CHECK_MODULES([GST_EGUEB_BIN], [${gst_egueb_bin_requirements_pc}])
-PKG_CHECK_MODULES([GST_EGUEB_LIB], [${gst_egueb_lib_requirements_pc}])
-PKG_CHECK_MODULES([GST_EGUEB_MODULES], [${gst_egueb_modules_requirements_pc}])
-
-GST_EGUEB_BIN_CFLAGS="${GST_EGUEB_BIN_CFLAGS} ${gst_egueb_bin_requirements_cflags}"
-GST_EGUEB_LIB_CFLAGS="${GST_EGUEB_LIB_CFLAGS} ${gst_egueb_lib_requirements_cflags}"
-GST_EGUEB_MODULES_CFLAGS="${GST_EGUEB_MODULES_CFLAGS} ${gst_egueb_modules_requirements_cflags}"
+GST_EGUEB_CFLAGS="${EGUEB_VIDEO_CFLAGS} ${egueb_video_requirements_cflags}"
+GST_EGUEB_CFLAGS="${EGUEB_VIDEO_LIBS} ${egueb_video_requirements_libs}"
 
 ## TODO Dependencies for the modules
 
