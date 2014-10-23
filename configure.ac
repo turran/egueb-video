@@ -113,6 +113,10 @@ echo "  CPPFLAGS..................................: $CPPFLAGS"
 echo "  CFLAGS....................................: $CFLAGS"
 echo "  LDFLAGS...................................: $LDFLAGS"
 echo
+echo "Backends:"
+echo "  GStreamer.................................: ${have_gstreamer}"
+echo "  ONEPLAY Engine............................: ${have_ope}"
+echo
 echo "Installation................................: make install (as root if needed, with 'su' or 'sudo')"
 echo "  prefix....................................: $prefix"
 echo
