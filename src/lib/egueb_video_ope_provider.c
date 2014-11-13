@@ -166,6 +166,7 @@ static void _egueb_video_ope_provider_descriptor_pause(void *data)
 }
 
 static Egueb_Dom_Video_Provider_Descriptor _egueb_video_ope_provider = {
+	/* .version 	= */ EGUEB_DOM_VIDEO_PROVIDER_DESCRIPTOR_VERSION,
 	/* .create 	= */ _egueb_video_ope_provider_descriptor_create,
 	/* .destroy 	= */ _egueb_video_ope_provider_descriptor_destroy,
 	/* .open 	= */ _egueb_video_ope_provider_descriptor_open,
