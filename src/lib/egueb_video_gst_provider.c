@@ -33,6 +33,8 @@ typedef struct _Egueb_Video_Gst_Provider
 	Enesim_Renderer *image;
 } Egueb_Video_Gst_Provider;
 
+static int _init = 0;
+
 static void _egueb_video_gst_provider_buffer_free(void *data, void *user_data)
 {
 	GstBuffer *buffer = user_data;
@@ -208,6 +210,10 @@ EAPI Egueb_Dom_Video_Provider * egueb_video_gst_provider_new(
 #if HAVE_GSTREAMER
 	Egueb_Video_Gst_Provider *thiz;
 	Egueb_Dom_Video_Provider *ret;
+
+	/* initialize GStreamer */
+	if (!_init++)
+		gst_init(NULL, NULL);
 
 	ret = egueb_dom_video_provider_new(&_egueb_video_gst_provider,
 			notifier, enesim_renderer_ref(image), n);

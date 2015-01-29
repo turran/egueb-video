@@ -37,7 +37,6 @@ EAPI void egueb_video_init(void)
 		eina_init();
 		egueb_video_log = eina_log_domain_register("egueb-video", EGUEB_VIDEO_LOG_COLOR_DEFAULT);
 		egueb_dom_init();
-		gst_init(NULL, NULL);
 	}
 }
 
@@ -45,7 +44,6 @@ EAPI void egueb_video_shutdown(void)
 {
 	if (_init == 1)
 	{
-		gst_deinit();
 		egueb_dom_shutdown();
 		eina_log_domain_unregister(egueb_video_log);
 		eina_shutdown();

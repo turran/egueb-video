@@ -36,6 +36,8 @@ typedef struct _Egueb_Video_Ope_Provider
 	int height;
 } Egueb_Video_Ope_Provider;
 
+static int _init = 0;
+
 static gboolean
 _egueb_video_ope_provider_request_render_mode_cb(OPEPlayer * player,
 		gpointer event, gpointer data)
@@ -188,6 +190,10 @@ EAPI Egueb_Dom_Video_Provider * egueb_video_ope_provider_new(
 #if HAVE_OPE
 	Egueb_Video_Ope_Provider *thiz;
 	Egueb_Dom_Video_Provider *ret;
+
+	/* initialize OPE */
+	if (!_init++)
+		ope_initialize();
 
 	ret = egueb_dom_video_provider_new(&_egueb_video_ope_provider,
 			notifier, enesim_renderer_ref(image), n);
