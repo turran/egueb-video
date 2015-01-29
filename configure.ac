@@ -60,7 +60,7 @@ egueb_video_requirements_pc_private=""
 PKG_CHECK_EXISTS([gstreamer-0.10],
    [
     have_gstreamer="yes"
-    egueb_video_requirements_pc="${egueb_video_requirements_pc} gstreamer-0.10"
+    egueb_video_requirements_pc_private+=" gstreamer-0.10"
     AC_DEFINE([HAVE_GSTREAMER], [1], [Have support for gstreamer])
    ],
    [have_gstreamer="no"])
@@ -71,7 +71,7 @@ AM_CONDITIONAL([HAVE_GSTREAMER], [test "x${have_gstreamer}" = "xyes"])
 PKG_CHECK_EXISTS([oneplay-engine],
    [
     have_ope="yes"
-    egueb_video_requirements_pc="${egueb_video_requirements_pc} oneplay-engine"
+    egueb_video_requirements_pc_private+=" oneplay-engine"
     AC_DEFINE([HAVE_OPE], [1], [Have support for ope])
    ],
    [have_ope="no"])
@@ -83,7 +83,7 @@ AC_SUBST([egueb_video_requirements_pc])
 AC_SUBST([egueb_video_requirements_pc_private])
 
 ### Checks for libraries
-PKG_CHECK_MODULES([EGUEB_VIDEO], [${egueb_video_requirements_pc}])
+PKG_CHECK_MODULES([EGUEB_VIDEO], [${egueb_video_requirements_pc} ${egueb_video_requirements_pc_private}])
 
 
 GST_EGUEB_CFLAGS="${EGUEB_VIDEO_CFLAGS} ${egueb_video_requirements_cflags}"
