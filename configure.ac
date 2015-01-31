@@ -34,6 +34,9 @@ AC_DEFINE_UNQUOTED([VERSION_MICRO], [v_mic], [Micro version])
 VMAJ=v_maj
 AC_SUBST([VMAJ])
 
+## Add parameters for aclocal (keep in sync with Makefile.am)
+AC_SUBST(ACLOCAL_AMFLAGS, "-I m4 -I common/m4")
+
 ### Needed information
 
 AC_CANONICAL_HOST
@@ -57,10 +60,36 @@ egueb_video_requirements_pc_private=""
 
 ### Check for each backend
 ### GStreamer
-PKG_CHECK_EXISTS([gstreamer-0.10],
+ENS_ENABLE_ARG([gst], [Disable GStreamer support], [yes])
+
+gstreamer_api_default="0.10"
+AC_ARG_WITH(gstreamer-api,
+   AS_HELP_STRING([--with-gstreamer-api],
+       [manually set the gstreamer API version 0.10 or 1.0 are valid values]),
+       [gstreamer_api="${withval}"])
+
+if test "x$gstreamer_api" = "x" ; then
+  gstreamer_api="${gstreamer_api_default}"
+fi
+
+case "$gstreamer_api" in
+  1.0)
+  gstreamer_pc="gstreamer-1.0"
+  AC_DEFINE_UNQUOTED(HAVE_GST_1, [1], [Use GStreamer 1.0])
+  ;;
+  0.10)
+  gstreamer_pc="gstreamer-0.10"
+  AC_DEFINE_UNQUOTED(HAVE_GST_0, [1], [Use GStreamer 0.10])
+  ;;
+  *)
+  AC_MSG_ERROR([Unsupported gstreamer version "$gstreamer_api"])
+  ;;
+esac
+
+PKG_CHECK_EXISTS([${gstreamer_pc}],
    [
     have_gstreamer="yes"
-    egueb_video_requirements_pc_private+=" gstreamer-0.10"
+    egueb_video_requirements_pc_private+=" ${gstreamer_pc}"
     AC_DEFINE([HAVE_GSTREAMER], [1], [Have support for gstreamer])
    ],
    [have_gstreamer="no"])
@@ -68,6 +97,11 @@ PKG_CHECK_EXISTS([gstreamer-0.10],
 AM_CONDITIONAL([HAVE_GSTREAMER], [test "x${have_gstreamer}" = "xyes"])
 
 ### ONEPLAY
+ENS_ENABLE_ARG([ope], [Enable ONEPLAY engine support], [no])
+
+### ONEPLAY can be built using GStreamer 1.0 or 0.10
+### We need to check what version it has used so we can actually use this
+### backend
 PKG_CHECK_EXISTS([oneplay-engine],
    [
     have_ope="yes"
@@ -114,7 +148,7 @@ echo "  CFLAGS....................................: $CFLAGS"
 echo "  LDFLAGS...................................: $LDFLAGS"
 echo
 echo "Backends:"
-echo "  GStreamer.................................: ${have_gstreamer}"
+echo "  GStreamer.................................: ${have_gstreamer} ${gstreamer_api}"
 echo "  ONEPLAY Engine............................: ${have_ope}"
 echo
 echo "Installation................................: make install (as root if needed, with 'su' or 'sudo')"

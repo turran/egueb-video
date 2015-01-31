@@ -15,12 +15,22 @@
  * License along with this library.
  * If not, see <http://www.gnu.org/licenses/>.
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "egueb_video_private.h"
 #include "egueb_video_gst_provider.h"
 
 #if HAVE_GSTREAMER
 #include "gst/gst.h"
+
+#if HAVE_GST_1
+#define PLAYBIN "playbin"
+#else
+#define PLAYBIN "playbin2"
+#endif
+
 #endif
 /*============================================================================*
  *                                  Local                                     *
@@ -29,7 +39,7 @@
 typedef struct _Egueb_Video_Gst_Provider
 {
 	Egueb_Dom_Video_Provider *vp;
-	GstElement *playbin2;
+	GstElement *playbin;
 	Enesim_Renderer *image;
 } Egueb_Video_Gst_Provider;
 
@@ -75,7 +85,7 @@ static gboolean _egueb_video_gst_provider_bus_watch(GstBus *bus, GstMessage *msg
 {
 	Egueb_Video_Gst_Provider *thiz = data;
 
-	if (msg->src != (gpointer) thiz->playbin2)
+	if (msg->src != (gpointer) thiz->playbin)
 		return TRUE;
 
 	switch (GST_MESSAGE_TYPE (msg)) {
@@ -108,12 +118,18 @@ static void * _egueb_video_gst_provider_descriptor_create(void)
 
 	/* force a rgb32 bpp */
 	capsfilter = gst_element_factory_make("capsfilter", NULL);
-	caps = gst_caps_new_simple ("video/x-raw-rgb",
+	caps = gst_caps_new_simple (
+#if HAVE_GST_1
+			"video/x-raw",
+			"format", G_TYPE_STRING, "BGRx",
+#else
+                        "video/x-raw-rgb",
 			"depth", G_TYPE_INT, 24, "bpp", G_TYPE_INT, 32,
 			"endianness", G_TYPE_INT, G_BIG_ENDIAN,
 			"red_mask", G_TYPE_INT, 0x0000ff00,
 			"green_mask", G_TYPE_INT, 0x00ff0000,
 			"blue_mask", G_TYPE_INT, 0xff000000,
+#endif
 			NULL);
 	g_object_set(capsfilter, "caps", caps, NULL);
 
@@ -133,14 +149,14 @@ static void * _egueb_video_gst_provider_descriptor_create(void)
 	gst_element_add_pad (GST_ELEMENT(sink), ghost_pad);
 	gst_object_unref (pad);
 
-	thiz->playbin2 = gst_element_factory_make("playbin2", NULL);
+	thiz->playbin = gst_element_factory_make(PLAYBIN, NULL);
 	/* we add a message handler */
-	bus = gst_pipeline_get_bus (GST_PIPELINE (thiz->playbin2));
+	bus = gst_pipeline_get_bus (GST_PIPELINE (thiz->playbin));
 	gst_bus_add_watch (bus, _egueb_video_gst_provider_bus_watch, thiz);
 	gst_object_unref (bus);
 
 	/* finally set the sink */
-	g_object_set(thiz->playbin2, "video-sink", sink, NULL);
+	g_object_set(thiz->playbin, "video-sink", sink, NULL);
 
 	return thiz;
 }
@@ -149,8 +165,8 @@ static void _egueb_video_gst_provider_descriptor_destroy(void *data)
 {
 	Egueb_Video_Gst_Provider *thiz = data;
 
-	gst_element_set_state(thiz->playbin2, GST_STATE_NULL);
-	gst_object_unref(thiz->playbin2);
+	gst_element_set_state(thiz->playbin, GST_STATE_NULL);
+	gst_object_unref(thiz->playbin);
 
 	if (thiz->image)
 	{
@@ -165,26 +181,26 @@ static void _egueb_video_gst_provider_descriptor_open(void *data, Egueb_Dom_Stri
 	Egueb_Video_Gst_Provider *thiz = data;
 
 	/* the uri that comes from the api must be absolute */
-	gst_element_set_state(thiz->playbin2, GST_STATE_READY);
-	g_object_set(thiz->playbin2, "uri", egueb_dom_string_string_get(uri), NULL);
+	gst_element_set_state(thiz->playbin, GST_STATE_READY);
+	g_object_set(thiz->playbin, "uri", egueb_dom_string_string_get(uri), NULL);
 }
 
 static void _egueb_video_gst_provider_descriptor_close(void *data)
 {
 	Egueb_Video_Gst_Provider *thiz = data;
-	gst_element_set_state(thiz->playbin2, GST_STATE_READY);
+	gst_element_set_state(thiz->playbin, GST_STATE_READY);
 }
 
 static void _egueb_video_gst_provider_descriptor_play(void *data)
 {
 	Egueb_Video_Gst_Provider *thiz = data;
-	gst_element_set_state(thiz->playbin2, GST_STATE_PLAYING);
+	gst_element_set_state(thiz->playbin, GST_STATE_PLAYING);
 }
 
 static void _egueb_video_gst_provider_descriptor_pause(void *data)
 {
 	Egueb_Video_Gst_Provider *thiz = data;
-	gst_element_set_state(thiz->playbin2, GST_STATE_PAUSED);
+	gst_element_set_state(thiz->playbin, GST_STATE_PAUSED);
 }
 
 static Egueb_Dom_Video_Provider_Descriptor _egueb_video_gst_provider = {
