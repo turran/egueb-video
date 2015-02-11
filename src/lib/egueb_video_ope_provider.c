@@ -28,7 +28,7 @@
 #if HAVE_OPE
 typedef struct _Egueb_Video_Ope_Provider
 {
-	Egueb_Dom_Video_Provider *vp;
+	Egueb_Dom_Media_Provider *vp;
 	Enesim_Renderer *image;
 	OPEPlayer *player;
 	OPEStream *stream;
@@ -107,23 +107,6 @@ _egueb_video_ope_provider_render_cb(OPEPlayer * player, gpointer event,
 /*----------------------------------------------------------------------------*
  *                       The Video provider interface                         *
  *----------------------------------------------------------------------------*/
-static void * _egueb_video_ope_provider_descriptor_create(void)
-{
-	Egueb_Video_Ope_Provider *thiz;
-
-	thiz = calloc(1, sizeof(Egueb_Video_Ope_Provider));
-	thiz->player = ope_player_new();
-	ope_player_event_listener_add (thiz->player,
-			OPE_PLAYER_EVENT_REQUEST_RENDER_MODE,
-			_egueb_video_ope_provider_request_render_mode_cb, thiz);
-	ope_player_event_listener_add (thiz->player, OPE_PLAYER_EVENT_RENDER,
-			_egueb_video_ope_provider_render_cb, thiz);
-
-	ope_player_event_listener_add (thiz->player, OPE_PLAYER_EVENT_STREAM_INFO_UPDATED,
-			_egueb_video_ope_provider_stream_info_updated_cb, thiz);
-	return thiz;
-}
-
 static void _egueb_video_ope_provider_descriptor_destroy(void *data)
 {
 	Egueb_Video_Ope_Provider *thiz = data;
@@ -167,9 +150,8 @@ static void _egueb_video_ope_provider_descriptor_pause(void *data)
 	ope_player_pause(thiz->player);
 }
 
-static Egueb_Dom_Video_Provider_Descriptor _egueb_video_ope_provider = {
-	/* .version 	= */ EGUEB_DOM_VIDEO_PROVIDER_DESCRIPTOR_VERSION,
-	/* .create 	= */ _egueb_video_ope_provider_descriptor_create,
+static Egueb_Dom_Media_Provider_Descriptor _egueb_video_ope_provider = {
+	/* .version 	= */ EGUEB_DOM_MEDIA_PROVIDER_DESCRIPTOR_VERSION,
 	/* .destroy 	= */ _egueb_video_ope_provider_descriptor_destroy,
 	/* .open 	= */ _egueb_video_ope_provider_descriptor_open,
 	/* .close 	= */ _egueb_video_ope_provider_descriptor_close,
@@ -183,28 +165,32 @@ static Egueb_Dom_Video_Provider_Descriptor _egueb_video_ope_provider = {
 /*============================================================================*
  *                                   API                                      *
  *============================================================================*/
-EAPI Egueb_Dom_Video_Provider * egueb_video_ope_provider_new(
-		const Egueb_Dom_Video_Provider_Notifier *notifier,
-		Enesim_Renderer *image, Egueb_Dom_Node *n)
+EAPI Egueb_Dom_Media_Provider * egueb_video_ope_provider_new(
+		Enesim_Renderer *image)
 {
 #if HAVE_OPE
 	Egueb_Video_Ope_Provider *thiz;
-	Egueb_Dom_Video_Provider *ret;
+	Egueb_Dom_Media_Provider *ret;
 
 	/* initialize OPE */
 	if (!_init++)
 		ope_initialize();
 
-	ret = egueb_dom_video_provider_new(&_egueb_video_ope_provider,
-			notifier, enesim_renderer_ref(image), n);
-	if (!ret)
-	{
-		enesim_renderer_unref(image);
-		return NULL;
-	}
 
-	thiz = egueb_dom_video_provider_data_get(ret);
-	thiz->image = image;
+	thiz = calloc(1, sizeof(Egueb_Video_Ope_Provider));
+	thiz->image = enesim_renderer_ref(image);
+	thiz->player = ope_player_new();
+	ope_player_event_listener_add (thiz->player,
+			OPE_PLAYER_EVENT_REQUEST_RENDER_MODE,
+			_egueb_video_ope_provider_request_render_mode_cb, thiz);
+	ope_player_event_listener_add (thiz->player, OPE_PLAYER_EVENT_RENDER,
+			_egueb_video_ope_provider_render_cb, thiz);
+
+	ope_player_event_listener_add (thiz->player, OPE_PLAYER_EVENT_STREAM_INFO_UPDATED,
+			_egueb_video_ope_provider_stream_info_updated_cb, thiz);
+
+	ret = egueb_dom_media_provider_new(&_egueb_video_ope_provider,
+			image, thiz);
 	thiz->vp = ret;
 
 	return ret;

@@ -49,9 +49,8 @@
 
 EAPI void egueb_video_init(void);
 EAPI void egueb_video_shutdown(void);
-EAPI Egueb_Dom_Video_Provider * egueb_video_provider_new(
-		const Egueb_Dom_Video_Provider_Notifier *notifier,
-		Enesim_Renderer *image, Egueb_Dom_Node *n);
+EAPI Egueb_Dom_Media_Provider * egueb_video_provider_new(
+		Enesim_Renderer *image);
 
 #include "egueb_video_gst_provider.h"
 #include "egueb_video_ope_provider.h"

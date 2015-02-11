@@ -38,7 +38,7 @@
 #if HAVE_GSTREAMER
 typedef struct _Egueb_Video_Gst_Provider
 {
-	Egueb_Dom_Video_Provider *vp;
+	Egueb_Dom_Media_Provider *vp;
 	GstElement *playbin;
 	Enesim_Renderer *image;
 } Egueb_Video_Gst_Provider;
@@ -104,15 +104,80 @@ static gboolean _egueb_video_gst_provider_bus_watch(GstBus *bus, GstMessage *msg
 /*----------------------------------------------------------------------------*
  *                       The Video provider interface                         *
  *----------------------------------------------------------------------------*/
-static void * _egueb_video_gst_provider_descriptor_create(void)
+static void _egueb_video_gst_provider_descriptor_destroy(void *data)
 {
+	Egueb_Video_Gst_Provider *thiz = data;
+
+	gst_element_set_state(thiz->playbin, GST_STATE_NULL);
+	gst_object_unref(thiz->playbin);
+
+	if (thiz->image)
+	{
+		enesim_renderer_unref(thiz->image);
+		thiz->image = NULL;
+	}
+	free(thiz);
+}
+
+static void _egueb_video_gst_provider_descriptor_open(void *data, Egueb_Dom_String *uri)
+{
+	Egueb_Video_Gst_Provider *thiz = data;
+
+	/* the uri that comes from the api must be absolute */
+	gst_element_set_state(thiz->playbin, GST_STATE_READY);
+	g_object_set(thiz->playbin, "uri", egueb_dom_string_string_get(uri), NULL);
+}
+
+static void _egueb_video_gst_provider_descriptor_close(void *data)
+{
+	Egueb_Video_Gst_Provider *thiz = data;
+	gst_element_set_state(thiz->playbin, GST_STATE_READY);
+}
+
+static void _egueb_video_gst_provider_descriptor_play(void *data)
+{
+	Egueb_Video_Gst_Provider *thiz = data;
+	gst_element_set_state(thiz->playbin, GST_STATE_PLAYING);
+}
+
+static void _egueb_video_gst_provider_descriptor_pause(void *data)
+{
+	Egueb_Video_Gst_Provider *thiz = data;
+	gst_element_set_state(thiz->playbin, GST_STATE_PAUSED);
+}
+
+static Egueb_Dom_Media_Provider_Descriptor _egueb_video_gst_provider = {
+	/* .version 	= */ EGUEB_DOM_MEDIA_PROVIDER_DESCRIPTOR_VERSION,
+	/* .destroy 	= */ _egueb_video_gst_provider_descriptor_destroy,
+	/* .open 	= */ _egueb_video_gst_provider_descriptor_open,
+	/* .close 	= */ _egueb_video_gst_provider_descriptor_close,
+	/* .play 	= */ _egueb_video_gst_provider_descriptor_play,
+	/* .pause 	= */ _egueb_video_gst_provider_descriptor_pause
+};
+#endif
+/*============================================================================*
+ *                                 Global                                     *
+ *============================================================================*/
+/*============================================================================*
+ *                                   API                                      *
+ *============================================================================*/
+EAPI Egueb_Dom_Media_Provider * egueb_video_gst_provider_new(
+		Enesim_Renderer *image)
+{
+#if HAVE_GSTREAMER
 	Egueb_Video_Gst_Provider *thiz;
+	Egueb_Dom_Media_Provider *ret;
 	GstElement *fakesink, *capsfilter, *sink;
 	GstBus *bus;
 	GstPad *pad, *ghost_pad;
 	GstCaps *caps;
 
+	/* initialize GStreamer */
+	if (!_init++)
+		gst_init(NULL, NULL);
+
 	thiz = calloc(1, sizeof(Egueb_Video_Gst_Provider));
+	thiz->image = enesim_renderer_ref(image);
 
 	sink = gst_bin_new(NULL);
 
@@ -158,89 +223,8 @@ static void * _egueb_video_gst_provider_descriptor_create(void)
 	/* finally set the sink */
 	g_object_set(thiz->playbin, "video-sink", sink, NULL);
 
-	return thiz;
-}
-
-static void _egueb_video_gst_provider_descriptor_destroy(void *data)
-{
-	Egueb_Video_Gst_Provider *thiz = data;
-
-	gst_element_set_state(thiz->playbin, GST_STATE_NULL);
-	gst_object_unref(thiz->playbin);
-
-	if (thiz->image)
-	{
-		enesim_renderer_unref(thiz->image);
-		thiz->image = NULL;
-	}
-	free(thiz);
-}
-
-static void _egueb_video_gst_provider_descriptor_open(void *data, Egueb_Dom_String *uri)
-{
-	Egueb_Video_Gst_Provider *thiz = data;
-
-	/* the uri that comes from the api must be absolute */
-	gst_element_set_state(thiz->playbin, GST_STATE_READY);
-	g_object_set(thiz->playbin, "uri", egueb_dom_string_string_get(uri), NULL);
-}
-
-static void _egueb_video_gst_provider_descriptor_close(void *data)
-{
-	Egueb_Video_Gst_Provider *thiz = data;
-	gst_element_set_state(thiz->playbin, GST_STATE_READY);
-}
-
-static void _egueb_video_gst_provider_descriptor_play(void *data)
-{
-	Egueb_Video_Gst_Provider *thiz = data;
-	gst_element_set_state(thiz->playbin, GST_STATE_PLAYING);
-}
-
-static void _egueb_video_gst_provider_descriptor_pause(void *data)
-{
-	Egueb_Video_Gst_Provider *thiz = data;
-	gst_element_set_state(thiz->playbin, GST_STATE_PAUSED);
-}
-
-static Egueb_Dom_Video_Provider_Descriptor _egueb_video_gst_provider = {
-	/* .version 	= */ EGUEB_DOM_VIDEO_PROVIDER_DESCRIPTOR_VERSION,
-	/* .create 	= */ _egueb_video_gst_provider_descriptor_create,
-	/* .destroy 	= */ _egueb_video_gst_provider_descriptor_destroy,
-	/* .open 	= */ _egueb_video_gst_provider_descriptor_open,
-	/* .close 	= */ _egueb_video_gst_provider_descriptor_close,
-	/* .play 	= */ _egueb_video_gst_provider_descriptor_play,
-	/* .pause 	= */ _egueb_video_gst_provider_descriptor_pause
-};
-#endif
-/*============================================================================*
- *                                 Global                                     *
- *============================================================================*/
-/*============================================================================*
- *                                   API                                      *
- *============================================================================*/
-EAPI Egueb_Dom_Video_Provider * egueb_video_gst_provider_new(
-		const Egueb_Dom_Video_Provider_Notifier *notifier,
-		Enesim_Renderer *image, Egueb_Dom_Node *n)
-{
-#if HAVE_GSTREAMER
-	Egueb_Video_Gst_Provider *thiz;
-	Egueb_Dom_Video_Provider *ret;
-
-	/* initialize GStreamer */
-	if (!_init++)
-		gst_init(NULL, NULL);
-
-	ret = egueb_dom_video_provider_new(&_egueb_video_gst_provider,
-			notifier, enesim_renderer_ref(image), n);
-	if (!ret)
-	{
-		enesim_renderer_unref(image);
-		return NULL;
-	}
-
-	thiz = egueb_dom_video_provider_data_get(ret);
-	thiz->image = image;
+	ret = egueb_dom_media_provider_new(&_egueb_video_gst_provider,
+			image, thiz);
 	thiz->vp = ret;
 
 	return ret;

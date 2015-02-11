@@ -51,15 +51,14 @@ EAPI void egueb_video_shutdown(void)
 	_init--;
 }
 
-EAPI Egueb_Dom_Video_Provider * egueb_video_provider_new(
-		const Egueb_Dom_Video_Provider_Notifier *notifier,
-		Enesim_Renderer *image, Egueb_Dom_Node *n)
+EAPI Egueb_Dom_Media_Provider * egueb_video_provider_new(
+		Enesim_Renderer *image)
 {
-	Egueb_Dom_Video_Provider *vp = NULL;
+	Egueb_Dom_Media_Provider *vp = NULL;
 
-	vp = egueb_video_ope_provider_new(notifier, image, n);
+	vp = egueb_video_ope_provider_new(image);
 	if (vp) return vp;
 
-	vp = egueb_video_gst_provider_new(notifier, image, n);
+	vp = egueb_video_gst_provider_new(image);
 	return vp;
 }

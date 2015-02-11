@@ -19,7 +19,6 @@
 #ifndef _EGUEB_VIDEO_OPE_PROVIDER_H_
 #define _EGUEB_VIDEO_OPE_PROVIDER_H_
 
-EAPI Egueb_Dom_Video_Provider * egueb_video_ope_provider_new(
-		const Egueb_Dom_Video_Provider_Notifier *notifier,
-		Enesim_Renderer *image, Egueb_Dom_Node *n);
+EAPI Egueb_Dom_Media_Provider * egueb_video_ope_provider_new(
+		Enesim_Renderer *image);
 #endif
