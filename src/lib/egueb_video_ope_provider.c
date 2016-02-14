@@ -129,7 +129,7 @@ static void _egueb_video_ope_provider_descriptor_destroy(void *data)
 static void _egueb_video_ope_provider_descriptor_open(void *data, Egueb_Dom_String *uri)
 {
 	Egueb_Video_Ope_Provider *thiz = data;
-	ope_player_open(thiz->player, egueb_dom_string_string_get(uri));
+	ope_player_open(thiz->player, egueb_dom_string_chars_get(uri));
 }
 
 static void _egueb_video_ope_provider_descriptor_close(void *data)

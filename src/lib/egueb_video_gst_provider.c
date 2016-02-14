@@ -125,7 +125,7 @@ static void _egueb_video_gst_provider_descriptor_open(void *data, Egueb_Dom_Stri
 
 	/* the uri that comes from the api must be absolute */
 	gst_element_set_state(thiz->playbin, GST_STATE_READY);
-	g_object_set(thiz->playbin, "uri", egueb_dom_string_string_get(uri), NULL);
+	g_object_set(thiz->playbin, "uri", egueb_dom_string_chars_get(uri), NULL);
 }
 
 static void _egueb_video_gst_provider_descriptor_close(void *data)
